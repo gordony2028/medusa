@@ -1,14 +1,7 @@
 {
-  "version": 2,
   "functions": {
-    "api/*.ts": {
-      "runtime": "@vercel/node@3"
+    "api/index.ts": {
+      "runtime": "nodejs20.x"
     }
-  },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index"
-    }
-  ]
+  }
 }
