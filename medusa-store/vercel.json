@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": ".medusa/server/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [".medusa/**"]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": ".medusa/server/index.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
