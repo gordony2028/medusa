@@ -112,44 +112,67 @@ export async function middleware(request: NextRequest) {
 
   let cacheId = cacheIdCookie?.value || crypto.randomUUID()
 
-  const regionMap = await getRegionMap(cacheId)
+  try {
+    const regionMap = await getRegionMap(cacheId)
+    const countryCode = regionMap && (await getCountryCode(request, regionMap))
 
-  const countryCode = regionMap && (await getCountryCode(request, regionMap))
+    const urlHasCountryCode =
+      countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode)
 
-  const urlHasCountryCode =
-    countryCode && request.nextUrl.pathname.split("/")[1].includes(countryCode)
+    // if one of the country codes is in the url and the cache id is set, return next
+    if (urlHasCountryCode && cacheIdCookie) {
+      return NextResponse.next()
+    }
 
-  // if one of the country codes is in the url and the cache id is set, return next
-  if (urlHasCountryCode && cacheIdCookie) {
-    return NextResponse.next()
-  }
+    // if one of the country codes is in the url and the cache id is not set, set the cache id and redirect
+    if (urlHasCountryCode && !cacheIdCookie) {
+      response.cookies.set("_medusa_cache_id", cacheId, {
+        maxAge: 60 * 60 * 24,
+      })
 
-  // if one of the country codes is in the url and the cache id is not set, set the cache id and redirect
-  if (urlHasCountryCode && !cacheIdCookie) {
-    response.cookies.set("_medusa_cache_id", cacheId, {
-      maxAge: 60 * 60 * 24,
-    })
+      return response
+    }
+
+    // check if the url is a static asset
+    if (request.nextUrl.pathname.includes(".")) {
+      return NextResponse.next()
+    }
+
+    const redirectPath =
+      request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname
+
+    const queryString = request.nextUrl.search ? request.nextUrl.search : ""
+
+    // If no country code is set, we redirect to the relevant region.
+    if (!urlHasCountryCode && countryCode) {
+      redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`
+      response = NextResponse.redirect(`${redirectUrl}`, 307)
+    }
 
     return response
+  } catch (error) {
+    console.error("Middleware error:", error)
+    // Fallback: redirect to default region if available, otherwise just continue
+    const fallbackCountryCode = DEFAULT_REGION || 'us'
+    
+    // check if the url is a static asset
+    if (request.nextUrl.pathname.includes(".")) {
+      return NextResponse.next()
+    }
+    
+    // If not already at a country-specific path, redirect to fallback
+    if (!request.nextUrl.pathname.startsWith(`/${fallbackCountryCode}`)) {
+      const redirectPath = request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname
+      const queryString = request.nextUrl.search ? request.nextUrl.search : ""
+      redirectUrl = `${request.nextUrl.origin}/${fallbackCountryCode}${redirectPath}${queryString}`
+      response = NextResponse.redirect(redirectUrl, 307)
+      response.cookies.set("_medusa_cache_id", cacheId, {
+        maxAge: 60 * 60 * 24,
+      })
+    }
+    
+    return response
   }
-
-  // check if the url is a static asset
-  if (request.nextUrl.pathname.includes(".")) {
-    return NextResponse.next()
-  }
-
-  const redirectPath =
-    request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname
-
-  const queryString = request.nextUrl.search ? request.nextUrl.search : ""
-
-  // If no country code is set, we redirect to the relevant region.
-  if (!urlHasCountryCode && countryCode) {
-    redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`
-    response = NextResponse.redirect(`${redirectUrl}`, 307)
-  }
-
-  return response
 }
 
 export const config = {

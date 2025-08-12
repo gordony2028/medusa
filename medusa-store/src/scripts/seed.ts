@@ -297,6 +297,7 @@ export default async function seedDemoData({ container }: ExecArgs) {
     },
   });
   const publishableApiKey = publishableApiKeyResult[0];
+  logger.info(`🔑 Publishable API Key created: ${publishableApiKey.token}`);
 
   await linkSalesChannelsToApiKeyWorkflow(container).run({
     input: {
