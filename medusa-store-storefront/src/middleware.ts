@@ -152,26 +152,29 @@ export async function middleware(request: NextRequest) {
     return response
   } catch (error) {
     console.error("Middleware error:", error)
-    // Fallback: redirect to default region if available, otherwise just continue
-    const fallbackCountryCode = DEFAULT_REGION || 'us'
     
-    // check if the url is a static asset
+    // Check if the URL is a static asset
     if (request.nextUrl.pathname.includes(".")) {
       return NextResponse.next()
     }
     
-    // If not already at a country-specific path, redirect to fallback
-    if (!request.nextUrl.pathname.startsWith(`/${fallbackCountryCode}`)) {
-      const redirectPath = request.nextUrl.pathname === "/" ? "" : request.nextUrl.pathname
-      const queryString = request.nextUrl.search ? request.nextUrl.search : ""
-      redirectUrl = `${request.nextUrl.origin}/${fallbackCountryCode}${redirectPath}${queryString}`
-      response = NextResponse.redirect(redirectUrl, 307)
+    // If backend is not available, we should just continue without redirecting
+    // to avoid infinite redirect loops
+    const fallbackCountryCode = DEFAULT_REGION || 'us'
+    
+    // If we're at the root, redirect to default country code
+    if (request.nextUrl.pathname === "/") {
+      const redirectUrl = `${request.nextUrl.origin}/${fallbackCountryCode}`
+      const response = NextResponse.redirect(redirectUrl, 307)
       response.cookies.set("_medusa_cache_id", cacheId, {
         maxAge: 60 * 60 * 24,
       })
+      return response
     }
     
-    return response
+    // For all other paths, just continue without redirecting
+    // This prevents infinite redirect loops when the backend is down
+    return NextResponse.next()
   }
 }
 
