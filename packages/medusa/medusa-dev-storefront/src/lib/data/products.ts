@@ -6,6 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getAuthHeaders, getCacheOptions } from "./cookies"
 import { getRegion, retrieveRegion } from "./regions"
+import { safeFetch } from "@lib/util/graceful-error"
 
 export const listProducts = async ({
   pageParam = 1,
@@ -53,36 +54,45 @@ export const listProducts = async ({
     ...(await getCacheOptions("products")),
   }
 
-  return sdk.client
-    .fetch<{ products: HttpTypes.StoreProduct[]; count: number }>(
-      `/store/products`,
-      {
-        method: "GET",
-        query: {
-          limit,
-          offset,
-          region_id: region?.id,
-          fields:
-            "*variants.calculated_price,+variants.inventory_quantity,+metadata,+tags",
-          ...queryParams,
-        },
-        headers,
-        next,
-        cache: "force-cache",
-      }
-    )
-    .then(({ products, count }) => {
-      const nextPage = count > offset + limit ? pageParam + 1 : null
+  return safeFetch(
+    async () => {
+      return sdk.client
+        .fetch<{ products: HttpTypes.StoreProduct[]; count: number }>(
+          `/store/products`,
+          {
+            method: "GET",
+            query: {
+              limit,
+              offset,
+              region_id: region?.id,
+              fields:
+                "*variants.calculated_price,+variants.inventory_quantity,+metadata,+tags",
+              ...queryParams,
+            },
+            headers,
+            next,
+            cache: "force-cache",
+          }
+        )
+        .then(({ products, count }) => {
+          const nextPage = count > offset + limit ? pageParam + 1 : null
 
-      return {
-        response: {
-          products,
-          count,
-        },
-        nextPage: nextPage,
-        queryParams,
-      }
-    })
+          return {
+            response: {
+              products,
+              count,
+            },
+            nextPage: nextPage,
+            queryParams,
+          }
+        })
+    },
+    {
+      response: { products: [], count: 0 },
+      nextPage: null,
+      queryParams,
+    }
+  )
 }
 
 /**

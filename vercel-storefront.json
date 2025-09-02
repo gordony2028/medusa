@@ -1,0 +1,28 @@
+{
+  "name": "medusa-storefront",
+  "framework": "nextjs",
+  "root": "packages/medusa/medusa-dev-storefront",
+  "buildCommand": "cd ../../../ && yarn build --filter=medusa-dev-storefront",
+  "installCommand": "yarn install",
+  "outputDirectory": "packages/medusa/medusa-dev-storefront/.next",
+  "env": {
+    "NEXT_PUBLIC_MEDUSA_BACKEND_URL": {
+      "description": "Your Railway backend URL (e.g., https://your-project.up.railway.app)",
+      "value": "",
+      "required": true
+    },
+    "NEXT_PUBLIC_BASE_URL": {
+      "description": "Your Vercel storefront URL (will be auto-filled)",
+      "value": "",
+      "required": true
+    },
+    "NEXT_PUBLIC_DEFAULT_REGION": {
+      "description": "Default region code",
+      "value": "us"
+    },
+    "REVALIDATE_WINDOW": {
+      "description": "Revalidation window in seconds",
+      "value": "10"
+    }
+  }
+}
